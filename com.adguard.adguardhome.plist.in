@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.adguard.adguardhome</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>@BIN@</string>
+    <string>--no-check-update</string>
+  </array>
+  <!-- The anti-root key: run as a dedicated unprivileged user, NOT root. -->
+  <key>UserName</key>
+  <string>@USER@</string>
+  <key>WorkingDirectory</key>
+  <string>@WORKDIR@</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <!-- launchd relaunches the process if it dies: our process-level failover. -->
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>@WORKDIR@/agh.log</string>
+  <key>StandardErrorPath</key>
+  <string>@WORKDIR@/agh.err</string>
+</dict>
+</plist>

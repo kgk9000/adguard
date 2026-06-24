@@ -1,0 +1,4 @@
+# downloaded artifacts + runtime state — never committed
+.work/
+*.log
+*.err
