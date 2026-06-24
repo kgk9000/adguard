@@ -113,10 +113,10 @@ update: fetch ## download+verify pinned version, swap binary, restart
 	@echo ">> updated — verify with: make status"
 
 .PHONY: start
-start: ## load (start) the daemon
+start: config ## seed config if missing, then load (start) the daemon
 	-sudo launchctl bootout system/$(PLIST_LABEL) 2>/dev/null
 	sudo launchctl bootstrap system $(PLIST_DST)
-	@echo ">> started — setup/admin UI at http://localhost:3000 (on the mini)"
+	@echo ">> started — admin UI at http://localhost:3000 (loopback, on the mini)"
 
 .PHONY: stop
 stop: ## unload (stop) the daemon
