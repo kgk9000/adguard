@@ -97,29 +97,35 @@ install: service-user fetch plist ## create svc user, download+verify, install d
 	sudo chmod 0755 $(PREFIX)/AdGuardHome
 	sudo chown -R $(SVC_USER):$(SVC_GID) $(PREFIX)
 	@echo ">> loading daemon"
-	sudo launchctl load -w $(PLIST_DST)
-	@echo ">> done — open the setup wizard at http://<mini-ip>:3000"
+	-sudo launchctl bootout system/$(PLIST_LABEL) 2>/dev/null
+	sudo launchctl bootstrap system $(PLIST_DST)
+	@echo ">> done — open the setup wizard at http://localhost:3000 (on the mini)"
 
 .PHONY: update
 update: fetch ## download+verify pinned version, swap binary, restart
 	@echo ">> swapping binary to $(AGH_VERSION)"
-	-sudo launchctl unload -w $(PLIST_DST)
+	-sudo launchctl bootout system/$(PLIST_LABEL)
 	sudo cp $(WORK)/AdGuardHome/AdGuardHome $(PREFIX)/AdGuardHome
 	sudo chown $(SVC_USER):$(SVC_GID) $(PREFIX)/AdGuardHome
 	sudo chmod 0755 $(PREFIX)/AdGuardHome
-	sudo launchctl load -w $(PLIST_DST)
+	sudo launchctl bootstrap system $(PLIST_DST)
 	@echo ">> updated — verify with: make status"
 
 .PHONY: start
 start: ## load (start) the daemon
-	sudo launchctl load -w $(PLIST_DST)
+	-sudo launchctl bootout system/$(PLIST_LABEL) 2>/dev/null
+	sudo launchctl bootstrap system $(PLIST_DST)
 
 .PHONY: stop
 stop: ## unload (stop) the daemon
-	sudo launchctl unload -w $(PLIST_DST)
+	-sudo launchctl bootout system/$(PLIST_LABEL)
 
 .PHONY: restart
 restart: stop start ## restart the daemon
+
+.PHONY: print
+print: ## launchd's full record for the daemon (last exit code, etc.)
+	sudo launchctl print system/$(PLIST_LABEL)
 
 .PHONY: status
 status: ## launchd state + what's listening on :53
@@ -158,7 +164,7 @@ unserve: _need-tailscale ## stop sharing the admin UI on the tailnet
 
 .PHONY: uninstall
 uninstall: ## stop + remove daemon (keeps data)
-	-sudo launchctl unload -w $(PLIST_DST)
+	-sudo launchctl bootout system/$(PLIST_LABEL)
 	-sudo rm -f $(PLIST_DST)
 	@echo ">> daemon removed (data kept in $(PREFIX)). Run 'make purge' to delete it."
 
