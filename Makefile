@@ -105,6 +105,7 @@ update: fetch ## download+verify pinned version, swap binary, restart
 start: ## load (start) the daemon
 	-sudo launchctl bootout system/$(PLIST_LABEL) 2>/dev/null
 	sudo launchctl bootstrap system $(PLIST_DST)
+	@echo ">> started — setup/admin UI at http://localhost:3000 (on the mini)"
 
 .PHONY: stop
 stop: ## unload (stop) the daemon
