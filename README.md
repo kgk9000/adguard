@@ -21,6 +21,10 @@ behind the eero (single-NAT), managed as code.
 - Release is **pinned and checksum-verified**; `make update` bumps `AGH_VERSION`.
 - The **admin UI binds to `127.0.0.1`** (loopback) — port 3000 is not open on any network,
   only reachable from on the mini. DNS listens on the LAN (`:53`); the admin panel does not.
+- macOS's **app firewall** silently blocks incoming connections to the unsigned AGH daemon, so
+  `:53` is unreachable on the LAN until the binary is allowlisted. `make firewall` (run by
+  `make install`) does that via `socketfilterfw` — otherwise the eero's DNS forwards get
+  dropped and clients fall back to the unfiltered secondary.
 - The binary and runtime state are **not** committed (see `.gitignore`); the repo holds
   the Makefile, the launchd plist template, the seed `AdGuardHome.yaml`, and these docs.
 

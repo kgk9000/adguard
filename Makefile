@@ -90,6 +90,15 @@ config: ## seed AdGuardHome.yaml if absent (skips the first-run wizard + admin c
 	  sudo chown $(SVC_USER):$(SVC_GID) $(PREFIX)/AdGuardHome.yaml; \
 	fi
 
+# macOS's app firewall silently blocks incoming connections to the unsigned AGH
+# daemon (a headless daemon can't answer the "allow incoming?" prompt), so :53 is
+# unreachable on the LAN even though it's bound. Allowlist the binary explicitly.
+.PHONY: firewall
+firewall: ## allow the AGH binary through the macOS app firewall (LAN reachability on :53)
+	sudo /usr/libexec/ApplicationFirewall/socketfilterfw --add $(PREFIX)/AdGuardHome
+	sudo /usr/libexec/ApplicationFirewall/socketfilterfw --unblockapp $(PREFIX)/AdGuardHome
+	@echo ">> AdGuardHome allowed to accept incoming connections"
+
 .PHONY: install
 install: service-user fetch plist config ## create svc user, download+verify, seed config, install daemon, start
 	@echo ">> installing binary to $(PREFIX)"
@@ -97,6 +106,8 @@ install: service-user fetch plist config ## create svc user, download+verify, se
 	sudo cp $(WORK)/AdGuardHome/AdGuardHome $(PREFIX)/AdGuardHome
 	sudo chmod 0755 $(PREFIX)/AdGuardHome
 	sudo chown -R $(SVC_USER):$(SVC_GID) $(PREFIX)
+	@echo ">> allowing AGH through the macOS app firewall"
+	$(MAKE) firewall
 	@echo ">> loading daemon"
 	-sudo launchctl bootout system/$(PLIST_LABEL) 2>/dev/null
 	sudo launchctl bootstrap system $(PLIST_DST)
