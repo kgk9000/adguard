@@ -8,6 +8,9 @@
   <array>
     <string>@BIN@</string>
     <string>--no-check-update</string>
+    <!-- macOS lets non-root bind :53, but AGH's first-launch check assumes euid==0.
+         --no-permcheck skips that false-positive so it runs as _adguardhome, not root. -->
+    <string>--no-permcheck</string>
   </array>
   <!-- The anti-root key: run as a dedicated unprivileged user, NOT root. -->
   <key>UserName</key>

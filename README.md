@@ -9,7 +9,9 @@ behind the eero (single-NAT), managed as code.
 - Runs as a **dedicated unprivileged launchd daemon** (`_adguardhome`), **never root**.
   macOS lets a non-root process bind port 53, so there's no `setcap`, no port-redirect,
   and no reason to grant root — the canned `AdGuardHome -s install` (which installs a
-  *root* daemon) is deliberately **not** used.
+  *root* daemon) is deliberately **not** used. AGH's first-launch check assumes `euid==0`
+  and would refuse to start otherwise, so the daemon runs with **`--no-permcheck`** to skip
+  that false-positive (binding still works because macOS permits it).
 - `KeepAlive` → launchd relaunches the process within seconds if it dies. That's our
   process-level failover (a restart keeps blocking, vs. leaking unfiltered queries).
 - Whole-mini outage is covered separately by **secondary DNS = `1.1.1.1` on the eero**:
