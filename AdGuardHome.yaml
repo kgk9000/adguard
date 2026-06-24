@@ -1,0 +1,57 @@
+# Seed config for AdGuard Home, pinned to schema_version 34 (AGH v0.107.77).
+#
+# Its mere existence is the point: AGH decides "first run" purely by whether this
+# file exists (a single os.Stat). Present -> NOT first run -> the install wizard AND
+# the broken "run as administrator" check are skipped entirely, and it starts as the
+# unprivileged _adguardhome user.
+#
+# NOTE: AGH rewrites this file at runtime (filter counts, any UI change). Treat the
+# committed copy as the *bootstrap seed*, not a live mirror. `make config` only drops
+# it in when absent, so it never clobbers the running config.
+
+schema_version: 34
+
+# Admin dashboard: loopback only -> port 3000 is not open on any network.
+# Reach it by SSH-tunnelling into the mini (see README).
+http:
+  address: 127.0.0.1:3000
+
+# No login configured. The dashboard is open, but only on 127.0.0.1, so the auth
+# boundary is "can you SSH into the mini." To require a password, generate a hash:
+#   htpasswd -nbB admin 'yourpassword'      # take the part after "admin:"
+# and add it here:
+#   users:
+#     - name: admin
+#       password: <bcrypt-hash>
+users: []
+
+dns:
+  bind_hosts:
+    - 0.0.0.0          # LAN-facing: your devices query this
+  port: 53
+  upstream_dns:
+    - 1.1.1.1
+    - 9.9.9.9
+  bootstrap_dns:
+    - 1.1.1.1
+    - 9.9.9.9
+
+filtering:
+  protection_enabled: true
+  filtering_enabled: true
+
+# Blocklists. The AGH DNS filter (id 1) is the stock starting list.
+filters:
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt
+    name: AdGuard DNS filter
+    id: 1
+
+whitelist_filters: []
+user_rules: []
+
+querylog:
+  enabled: true
+
+statistics:
+  enabled: true

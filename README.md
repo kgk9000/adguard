@@ -9,9 +9,10 @@ behind the eero (single-NAT), managed as code.
 - Runs as a **dedicated unprivileged launchd daemon** (`_adguardhome`), **never root**.
   macOS lets a non-root process bind port 53, so there's no `setcap`, no port-redirect,
   and no reason to grant root — the canned `AdGuardHome -s install` (which installs a
-  *root* daemon) is deliberately **not** used. AGH's first-launch check assumes `euid==0`
-  and would refuse to start otherwise, so the daemon runs with **`--no-permcheck`** to skip
-  that false-positive (binding still works because macOS permits it).
+  *root* daemon) is deliberately **not** used. AGH's broken first-launch "must be admin"
+  check (it assumes Linux privileged-port rules) is sidestepped by shipping a **seed config**
+  so it never thinks it's first-run; `--no-permcheck` then skips its steady-state file-perm
+  migration (which would otherwise want root ownership). Binding works — macOS permits it.
 - `KeepAlive` → launchd relaunches the process within seconds if it dies. That's our
   process-level failover (a restart keeps blocking, vs. leaking unfiltered queries).
 - Whole-mini outage is covered separately by **secondary DNS = `1.1.1.1` on the eero**:
@@ -21,31 +22,31 @@ behind the eero (single-NAT), managed as code.
 - The **admin UI binds to `127.0.0.1`** (loopback) — port 3000 is not open on any network,
   only reachable from on the mini. DNS listens on the LAN (`:53`); the admin panel does not.
 - The binary and runtime state are **not** committed (see `.gitignore`); the repo holds
-  only the Makefile, the launchd plist template, and these docs.
+  the Makefile, the launchd plist template, the seed `AdGuardHome.yaml`, and these docs.
 
-## Config ownership (read this)
+## No wizard — seed config (read this)
 
-AdGuard Home **rewrites `AdGuardHome.yaml` itself** every time you change a setting in the
-web UI. This repo intentionally does **not** track that file: AGH owns the live config and
-you configure via the UI. If you later want git to be the source of truth, commit the yaml
-and manage config *only* by editing the file + `make restart` — don't mix the two, and keep
-the admin password hash out of the repo.
+AGH decides "first run" purely by whether `AdGuardHome.yaml` exists (literally one `os.Stat`).
+No file → it shows the install wizard *and* runs the broken first-launch admin check. So we
+**skip the wizard entirely** by shipping a seed `AdGuardHome.yaml`. With the file present, AGH
+never thinks it's first-run, never runs that check, and starts as `_adguardhome`.
+
+AGH **rewrites that file at runtime** (filter counts, any UI change), so the committed copy is
+the *bootstrap seed*, not a live mirror. `make config` only drops it in **when absent** — it
+will not clobber a running config. To re-assert the repo version, delete the live file first.
 
 ## Deploy (run on the mini)
 
     git clone <this-repo> ~/adguard && cd ~/adguard
-    make install      # create svc user, download+verify, install daemon, start
+    make install      # create svc user, download+verify, seed config, install daemon, start
 
-`make install` will prompt for `sudo` (creating the service user, writing the LaunchDaemon,
-loading it). The AdGuard Home **process** that results is unprivileged.
+`make install` will prompt for `sudo` (service user, LaunchDaemon, config). The AdGuard Home
+**process** that results is unprivileged.
 
-Then open the setup wizard **from the mini itself** at `http://localhost:3000`. On the
-first screen:
-
-- **Admin Web Interface** → bind to **`127.0.0.1`** (loopback only — not exposed on the LAN).
-- **DNS server** → bind to **All interfaces**, port **`53`** (devices must be able to reach it).
-
-Then set the admin login, pick upstreams (e.g. `1.1.1.1`, `9.9.9.9`), and choose blocklists.
+**There is no wizard.** `make install` seeds `AdGuardHome.yaml`, so AGH comes straight up
+serving DNS on **`:53`** (all interfaces), admin UI on **`127.0.0.1:3000`** (loopback), with the
+upstreams (`1.1.1.1`/`9.9.9.9`) and a blocklist baked into the seed. Tweak those in the
+dashboard, or by editing the seed, afterward.
 
 ### Admin UI access (remote)
 

@@ -79,8 +79,19 @@ plist: # (internal) render the LaunchDaemon plist and install it
 	     com.adguard.adguardhome.plist.in > $(WORK)/$(PLIST_LABEL).plist
 	sudo install -m 0644 -o root -g wheel $(WORK)/$(PLIST_LABEL).plist $(PLIST_DST)
 
+.PHONY: config
+config: ## seed AdGuardHome.yaml if absent (skips the first-run wizard + admin check)
+	@if [ -f $(PREFIX)/AdGuardHome.yaml ]; then \
+	  echo ">> config present at $(PREFIX)/AdGuardHome.yaml — leaving it (AGH owns it now)"; \
+	else \
+	  echo ">> seeding $(PREFIX)/AdGuardHome.yaml from repo"; \
+	  sudo mkdir -p $(PREFIX); \
+	  sudo cp AdGuardHome.yaml $(PREFIX)/AdGuardHome.yaml; \
+	  sudo chown $(SVC_USER):$(SVC_GID) $(PREFIX)/AdGuardHome.yaml; \
+	fi
+
 .PHONY: install
-install: service-user fetch plist ## create svc user, download+verify, install daemon, start
+install: service-user fetch plist config ## create svc user, download+verify, seed config, install daemon, start
 	@echo ">> installing binary to $(PREFIX)"
 	sudo mkdir -p $(PREFIX)
 	sudo cp $(WORK)/AdGuardHome/AdGuardHome $(PREFIX)/AdGuardHome
