@@ -16,8 +16,8 @@ behind the eero (single-NAT), managed as code.
   clients fall back after a timeout. We accept the occasional unfiltered query — there's
   no second machine to act as a blocking secondary.
 - Release is **pinned and checksum-verified**; `make update` bumps `AGH_VERSION`.
-- The **admin UI binds to `127.0.0.1`** and is shared to the tailnet only via `make serve`
-  (Tailscale Serve, never Funnel). DNS listens on the LAN (`:53`); the panel does not.
+- The **admin UI binds to `127.0.0.1`** (loopback) — port 3000 is not open on any network,
+  only reachable from on the mini. DNS listens on the LAN (`:53`); the admin panel does not.
 - The binary and runtime state are **not** committed (see `.gitignore`); the repo holds
   only the Makefile, the launchd plist template, and these docs.
 
@@ -45,18 +45,18 @@ first screen:
 
 Then set the admin login, pick upstreams (e.g. `1.1.1.1`, `9.9.9.9`), and choose blocklists.
 
-### Admin UI access — tailnet only
+### Admin UI access (remote)
 
-The admin UI is loopback-bound, so nothing on the LAN or the internet can reach it directly.
-Expose it to your tailnet (and nothing else) via Tailscale Serve:
+Port 3000 is loopback-bound — not open on any network, only reachable from on the mini. To
+administer it remotely, get *inside* the mini and use its loopback; don't open the port. The
+simplest way is an SSH tunnel (the mini is reachable via Tailscale, which is just an
+authenticated path *into* the machine — not a port you expose):
 
-    make serve         # tailscale serve --bg 3000  ->  https://<mini>.<tailnet>.ts.net/
-    make serve-status  # show the exact URL
-    make unserve       # stop sharing
+    # from your laptop:
+    ssh -L 3000:localhost:3000 <you>@<mini>
+    # then browse http://localhost:3000 on the laptop
 
-Prereqs: Tailscale installed and logged in on the mini, and HTTPS/MagicDNS enabled for the
-tailnet. `serve` is tailnet-private — we never use `funnel` (which is public). On macOS the
-`tailscale` CLI may need `sudo` unless you've run `tailscale set --operator=$(whoami)`.
+3000 stays closed to the network the whole time.
 
 ### Point DNS at the mini
 

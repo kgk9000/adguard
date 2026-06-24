@@ -7,7 +7,6 @@ PREFIX      ?= /usr/local/AdGuardHome
 SVC_USER    ?= _adguardhome
 SVC_UID     ?= 450
 SVC_GID     ?= 450
-ADMIN_PORT  ?= 3000
 
 PLIST_LABEL := com.adguard.adguardhome
 PLIST_DST   := /Library/LaunchDaemons/$(PLIST_LABEL).plist
@@ -28,14 +27,6 @@ BASE  := https://github.com/AdguardTeam/AdGuardHome/releases/download/$(AGH_VERS
 URL   := $(BASE)/$(ASSET)
 CKURL := $(BASE)/checksums.txt
 
-# Locate the tailscale CLI across the usual macOS spots: PATH, Homebrew (arm/intel),
-# and the GUI/App Store app bundle. Override with `make serve TAILSCALE=/path`.
-TS_CANDIDATES := $(shell command -v tailscale 2>/dev/null) \
-                 /opt/homebrew/bin/tailscale \
-                 /usr/local/bin/tailscale \
-                 /Applications/Tailscale.app/Contents/MacOS/Tailscale
-TAILSCALE     ?= $(firstword $(wildcard $(TS_CANDIDATES)))
-
 .DEFAULT_GOAL := help
 
 # Self-documenting: every target with a `## ` comment is listed automatically.
@@ -43,7 +34,6 @@ TAILSCALE     ?= $(firstword $(wildcard $(TS_CANDIDATES)))
 help: ## show this help
 	@echo "AdGuard Home ($(AGH_VERSION), darwin/$(GOARCH))"
 	@echo "vars: PREFIX=$(PREFIX) SVC_USER=$(SVC_USER) SVC_UID=$(SVC_UID)"
-	@echo "tailscale: $(if $(TAILSCALE),$(TAILSCALE),NOT FOUND — install it or set TAILSCALE=)"
 	@echo
 	@grep -E '^[a-zA-Z_-]+:.*## .*$$' $(MAKEFILE_LIST) \
 	  | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -137,30 +127,6 @@ status: ## launchd state + what's listening on :53
 .PHONY: logs
 logs: ## tail the service log (agh.log / agh.err)
 	@tail -n 80 -f $(PREFIX)/agh.log $(PREFIX)/agh.err
-
-# Bind the admin UI to 127.0.0.1 in the AGH wizard, then `serve` it to the tailnet only.
-# `serve` = private (tailnet); `funnel` = public — we never funnel.
-.PHONY: _need-tailscale
-_need-tailscale: # (internal) fail clearly if the tailscale CLI wasn't found
-	@test -n "$(TAILSCALE)" || { \
-	  echo "!! tailscale CLI not found in PATH, Homebrew, or /Applications/Tailscale.app"; \
-	  echo "   install it, or run: make $(MAKECMDGOALS) TAILSCALE=/full/path/to/tailscale"; \
-	  exit 1; \
-	}
-	@echo ">> using tailscale: $(TAILSCALE)"
-
-.PHONY: serve
-serve: _need-tailscale ## expose the (loopback) admin UI to the tailnet only, https, persistent
-	$(TAILSCALE) serve --bg $(ADMIN_PORT)
-	@echo ">> admin UI shared on the tailnet — URL via: make serve-status"
-
-.PHONY: serve-status
-serve-status: _need-tailscale ## show tailscale serve config + the tailnet URL
-	$(TAILSCALE) serve status
-
-.PHONY: unserve
-unserve: _need-tailscale ## stop sharing the admin UI on the tailnet
-	$(TAILSCALE) serve reset
 
 .PHONY: uninstall
 uninstall: ## stop + remove daemon (keeps data)
