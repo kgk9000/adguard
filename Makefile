@@ -7,6 +7,7 @@ PREFIX      ?= /usr/local/AdGuardHome
 SVC_USER    ?= _adguardhome
 SVC_UID     ?= 450
 SVC_GID     ?= 450
+ADMIN_PORT  ?= 3000
 
 PLIST_LABEL := com.adguard.adguardhome
 PLIST_DST   := /Library/LaunchDaemons/$(PLIST_LABEL).plist
@@ -121,6 +122,21 @@ status: ## launchd state + what's listening on :53
 .PHONY: logs
 logs: ## tail the service log (agh.log / agh.err)
 	@tail -n 80 -f $(PREFIX)/agh.log $(PREFIX)/agh.err
+
+# Bind the admin UI to 127.0.0.1 in the AGH wizard, then `serve` it to the tailnet only.
+# `serve` = private (tailnet); `funnel` = public — we never funnel.
+.PHONY: serve
+serve: ## expose the (loopback) admin UI to the tailnet only, https, persistent
+	tailscale serve --bg $(ADMIN_PORT)
+	@echo ">> admin UI shared on the tailnet — URL via: make serve-status"
+
+.PHONY: serve-status
+serve-status: ## show tailscale serve config + the tailnet URL
+	tailscale serve status
+
+.PHONY: unserve
+unserve: ## stop sharing the admin UI on the tailnet
+	tailscale serve reset
 
 .PHONY: uninstall
 uninstall: ## stop + remove daemon (keeps data)

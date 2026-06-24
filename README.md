@@ -16,6 +16,8 @@ behind the eero (single-NAT), managed as code.
   clients fall back after a timeout. We accept the occasional unfiltered query — there's
   no second machine to act as a blocking secondary.
 - Release is **pinned and checksum-verified**; `make update` bumps `AGH_VERSION`.
+- The **admin UI binds to `127.0.0.1`** and is shared to the tailnet only via `make serve`
+  (Tailscale Serve, never Funnel). DNS listens on the LAN (`:53`); the panel does not.
 - The binary and runtime state are **not** committed (see `.gitignore`); the repo holds
   only the Makefile, the launchd plist template, and these docs.
 
@@ -35,10 +37,30 @@ the admin password hash out of the repo.
 `make install` will prompt for `sudo` (creating the service user, writing the LaunchDaemon,
 loading it). The AdGuard Home **process** that results is unprivileged.
 
-Then open the setup wizard at `http://<mini-ip>:3000` and set the admin login, pick
-upstreams (e.g. `1.1.1.1`, `9.9.9.9`), and choose blocklists.
+Then open the setup wizard **from the mini itself** at `http://localhost:3000`. On the
+first screen:
 
-Finally, point DNS at the mini — **eero app → Settings → Network Settings → DNS**:
+- **Admin Web Interface** → bind to **`127.0.0.1`** (loopback only — not exposed on the LAN).
+- **DNS server** → bind to **All interfaces**, port **`53`** (devices must be able to reach it).
+
+Then set the admin login, pick upstreams (e.g. `1.1.1.1`, `9.9.9.9`), and choose blocklists.
+
+### Admin UI access — tailnet only
+
+The admin UI is loopback-bound, so nothing on the LAN or the internet can reach it directly.
+Expose it to your tailnet (and nothing else) via Tailscale Serve:
+
+    make serve         # tailscale serve --bg 3000  ->  https://<mini>.<tailnet>.ts.net/
+    make serve-status  # show the exact URL
+    make unserve       # stop sharing
+
+Prereqs: Tailscale installed and logged in on the mini, and HTTPS/MagicDNS enabled for the
+tailnet. `serve` is tailnet-private — we never use `funnel` (which is public). On macOS the
+`tailscale` CLI may need `sudo` unless you've run `tailscale set --operator=$(whoami)`.
+
+### Point DNS at the mini
+
+**eero app → Settings → Network Settings → DNS**:
 
 | | value |
 |---|---|
