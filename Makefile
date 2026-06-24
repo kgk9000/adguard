@@ -100,7 +100,7 @@ install: service-user fetch plist config ## create svc user, download+verify, se
 	@echo ">> loading daemon"
 	-sudo launchctl bootout system/$(PLIST_LABEL) 2>/dev/null
 	sudo launchctl bootstrap system $(PLIST_DST)
-	@echo ">> done — open the setup wizard at http://localhost:3000 (on the mini)"
+	@echo ">> done — dashboard at http://localhost:3000 (on the mini)"
 
 .PHONY: update
 update: fetch ## download+verify pinned version, swap binary, restart
@@ -116,7 +116,7 @@ update: fetch ## download+verify pinned version, swap binary, restart
 start: config ## seed config if missing, then load (start) the daemon
 	-sudo launchctl bootout system/$(PLIST_LABEL) 2>/dev/null
 	sudo launchctl bootstrap system $(PLIST_DST)
-	@echo ">> started — admin UI at http://localhost:3000 (loopback, on the mini)"
+	@echo ">> started — dashboard at http://localhost:3000 (on the mini)"
 
 .PHONY: stop
 stop: ## unload (stop) the daemon
